@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+
+
+## Find true directory script resides in, true name, and true path
+__SOURCE__="${BASH_SOURCE[0]}"
+while [[ -h "${__SOURCE__}" ]]; do
+    __SOURCE__="$(find "${__SOURCE__}" -type l -ls | sed -n 's@^.* -> \(.*\)@\1@p')"
+done
+__DIR__="$(cd -P "$(dirname "${__SOURCE__}")" && pwd)"
+# __DIR_NAME__="${__DIR__##*/}"
+# __NAME__="${__SOURCE__##*/}"
+# __PATH__="${__DIR__}/${__NAME__}"
+__AUTHOR__='S0AndS0'
+__DESCRIPTION__='Copies, and customizes, documentation file to target path'
+
+
+## Provides: 'falure' <line-number> <command> exit-code
+# shellcheck source=shared_functions/modules/trap-failure/failure.sh
+source "${__DIR__}/shared_functions/modules/trap-failure/failure.sh"
+trap 'failure "LINENO" "BASH_LINENO" "${BASH_COMMAND}" "${?}"' ERR
+
+## Provides:  'argument_parser <ref_to_allowed_args> <ref_to_user_supplied_args>'
+# shellcheck source=shared_functions/modules/argument-parser/argument-parser.sh
+source "${__DIR__}/shared_functions/modules/argument-parser/argument-parser.sh"
+
+# shellcheck source=shared_functions/license.sh
+source "${__DIR__}/shared_functions/license.sh"
+
+
+set -eE -o functrace
+
+
+__usage__() {
+    local _message="${1}"
+    local _project_path="${_project_path:-${__DIR__}}"
+    local _script_name='script-file.vim'
+    local _doc_name='documentation-file.txt'
+    local _map_mode="${_map_mode:-Visual}"
+    cat <<EOF
+${__DESCRIPTION__}
+
+
+-h           --help
+    {boolean} Prints this message and exists
+
+-l          --license
+    {boolean} Prints license and exits
+
+-v          --verbose
+    {boolean} Prints messages about skipped actions
+
+-c          --clobber
+    {boolean} Overwirtes existing documentation file
+
+--path      --project-path="${_project_path}"
+    {path} Directory path to Vim project/plugin
+
+--name      --script-name="${_script_name}"
+    {print} Name of plugin script to write documentation file for
+
+--doc       --doc-name="${_doc_name}"
+    {print} Name for documentation file
+
+--mode      --map-mode="${_map_mode}"
+    {print} Vim mode documented within file
+
+--author="${_author}"
+    {print} Author name for documentation file
+
+--version="${_version}"
+    {print} Target version of Vim for plugin documentation
+EOF
+
+    if (( "${#_message}" )); then
+        printf >&2 '\n\n## Error: %s\n' "${_message}"
+        exit 1
+    fi
+}
+
+
+## Save passed arguments and acceptable arguments to Bash arrays
+# shellcheck disable=SC2034
+{
+    _passed_args=( "${@:?No arguments provided}" )
+    _acceptable_args=(
+        '--help|-h:bool'
+        '--license|-l:bool'
+        '--verbose|-v:bool'
+        '--clobber|-c:bool'
+        '--version:print'
+        '--author:print'
+        '--project-path|--path:path'
+        '--script-name|--name:print'
+        '--doc-name|--doc:print'
+        '--map-mode|--mode:print'
+    )
+}
+
+## Pass arrays by reference/name to the `argument_parser` function
+# shellcheck disable=SC2034
+argument_parser '_passed_args' '_acceptable_args'
+_exit_status="$?"
+
+
+# shellcheck disable=SC2154
+(( _license )) && {
+    __license__ "${__DESCRIPTION__}"
+    exit ${_exit_status:-0}
+}
+
+(( "${#_author}" )) || {
+    _author="${__AUTHOR__}"
+}
+
+(( "${#_version}" )) || {
+    _version="$(vim --version | awk '{ print $5; exit 0; }')"
+    _version="${_version:-0.0.1}"
+}
+
+(( "${#_map_mode}" )) || {
+    _map_mode='Visual'
+}
+
+(( _exit_status )) && {
+    __usage__ "Argument parsing exit status greater than 0 -> ${_exit_status}"
+}
+
+# shellcheck disable=SC2154
+(( _help )) && {
+    __usage__
+    exit 0
+}
+
+
+(( "${#_doc_name}" )) || {
+    __usage__ 'Documentation name undefined!'
+}
+
+(( "${#_script_name}" )) || {
+    __usage__ 'Script name undefined!'
+}
+
+
+(( "${#_project_path}" )) || {
+    __usage__ 'Project path is undefined!'
+}
+
+_doc_path="${_project_path}/doc/${_doc_name%.txt}.txt"
+# shellcheck disable=SC2154
+{ [[ -f "${_doc_path}" ]] && ! (( _clobber )); } && {
+    __usage__ "Documentation file already exists at -> ${_doc_path}"
+}
+
+
+(( "${#_script_name}" )) || {
+    __usage__ 'Directory name cannot be parsed from target path!'
+}
+_script_name="${_script_name%.vim}"
+_script_name_title="$(awk '{
+    split($0, array, /[ -]/);
+    for (i = 0; i < length(array); i++) {
+        array[i] = toupper(substr(array[i], 1, 1)) substr(array[i], 2, length(array[i]));
+    }
+    for (i = 0; i < length(array); i++) {
+        if (result) {
+            result = result " " array[i];
+        } else {
+            result = array[i];
+        }
+    }
+    print result;
+    exit 0;
+}' <<<"${_script_name}")"
+
+
+[[ -d "${_project_path}" ]] || {
+    __usage__ "Project path is not a directory -> ${_project_path}"
+}
+
+
+_cp_opts=()
+_sed_opts=( --in-place )
+# shellcheck disable=SC2154
+if (( _verbose )); then
+    _cp_opts+=( --verbose )
+else
+    _sed_opts+=( --silent )
+fi
+
+
+if (( "${#_cp_opts[@]}" )); then
+    cp "${_cp_opts[@]}" "${__DIR__}/doc/template.txt" "${_doc_path}"
+else
+    cp "${__DIR__}/doc/template.txt" "${_doc_path}"
+fi
+
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_AUTHOR>>#${_author}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_DATE>>#$(date +'%Y')#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_SCRIPT_NAME>>#${_script_name}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_SCRIPT_NAME_TITLE>>#${_script_name_title}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_DOC>>#${_doc_name}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_MODE>>#${_map_mode}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_MODE_LOWERCASE>>#${_map_mode,,}#g" "${_doc_path}"
+sed "${_sed_opts[@]}" "s#<<TEMPLATE_VERSION>>#${_version}#g" "${_doc_path}"
+

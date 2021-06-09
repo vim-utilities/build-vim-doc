@@ -1,0 +1,52 @@
+# build-vim-doc completion
+
+_build_vim_doc() {
+    local cur prev words cword split
+    _init_completion || return
+
+    # default completion if parameter looks like a path
+    if [[ "${cur}" == @(*/|[.~])* ]]; then
+        _filedir
+        return
+    fi
+
+    case "${prev}" in
+        -h|--help|-l|--license|-v|--verbose|-c|--clobber)
+            return
+        ;;
+        --path|--project-path)
+            _filedir
+            return
+        ;;
+        --name|--script-name)
+            COMPREPLY=( $( compgen -W 'script-file.vim' -- ${cur} ) )
+            return
+        ;;
+        --doc|--doc-name)
+            COMPREPLY=( $( compgen -W 'documentation-file.txt' -- ${cur} ) )
+            return
+        ;;
+        --mode|--map-mode)
+            COMPREPLY=( $( compgen -W 'Visual' -- ${cur} ) )
+            return
+        ;;
+        --author)
+            COMPREPLY=( $( compgen -W 'S0AndS0' -- ${cur} ) )
+            return
+        ;;
+        --version)
+            COMPREPLY=( $( compgen -W '0.0.1' -- ${cur} ) )
+            return
+        ;;
+    esac
+
+    # Parse help for any un-matched parameters
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $( compgen -W '$( _parse_help "${1}" )' -- "${cur}" ) )
+        [[ ${COMPREPLY} == *= ]] && compopt -o nospace
+        return
+    fi
+} &&
+complete -F _build_vim_doc build-vim-doc
+
+# ex: filetype=bash
