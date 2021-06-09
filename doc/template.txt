@@ -1,0 +1,27 @@
+*<<TEMPLATE_SCRIPT_NAME>>.txt*      For Vim version <<TEMPLATE_VERSION>>       Last change: <<TEMPLATE_DATE>>
+
+
+                      <<TEMPLATE_SCRIPT_NAME_TITLE>>    by <<TEMPLATE_AUTHOR>>
+
+
+<<TEMPLATE_SCRIPT_NAME_TITLE>>                                              *<<TEMPLATE_SCRIPT_NAME>>*
+
+1. <<TEMPLATE_MODE>> Map Defaults                            |<<TEMPLATE_SCRIPT_NAME>>-<<TEMPLATE_MODE_LOWERCASE>>-map|
+2. Functions                                       |<<TEMPLATE_SCRIPT_NAME>>-functions|
+3. Configuration                               |<<TEMPLATE_SCRIPT_NAME>>-configuration|
+4. Notes                                               |<<TEMPLATE_SCRIPT_NAME>>-notes|
+
+==============================================================================
+1. <<TEMPLATE_MODE>> Map Defaults                            *<<TEMPLATE_SCRIPT_NAME>>-<<TEMPLATE_MODE_LOWERCASE>>-map*
+
+==============================================================================
+2. Functions                                       *<<TEMPLATE_SCRIPT_NAME>>-functions*
+
+==============================================================================
+3. Configuration                               *<<TEMPLATE_SCRIPT_NAME>>-configuration*
+
+==============================================================================
+4. Notes                                               *<<TEMPLATE_SCRIPT_NAME>>-notes*
+
+
+ vim:tw=78:ts=8:ft=help:norl:
